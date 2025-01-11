@@ -2,7 +2,7 @@
 
 # Získání ID naposledy vytvořeného objektu z logu
 LOG_ENTRY=$(grep 'create' /var/log/pve/tasks/index | tail -n 1)
-VMID=$(echo "$LOG_ENTRY" | grep -oP '\d+')
+VMID=$(echo "$LOG_ENTRY" | grep -oP '(?<=/)(\d+)(?=/create)' | head -n 1)
 
 # Ověření, zda bylo ID úspěšně získáno
 if [ -z "$VMID" ]; then
