@@ -1,26 +1,32 @@
 #!/bin/bash
 
-# Získání poslední vytvořené operace z logu
+# Získání ID naposledy vytvořeného objektu z logu
 LOG_ENTRY=$(grep 'create' /var/log/pve/tasks/index | tail -n 1)
+VMID=$(echo "$LOG_ENTRY" | grep -oP '\d+')
 
-# Extrakce ID a typu
-VMID=$(echo "$LOG_ENTRY" | grep -oP '\svm/\K\d+|\slxc/\K\d+')
-if echo "$LOG_ENTRY" | grep -q 'lxc/'; then
-  TYPE="CT"
-elif echo "$LOG_ENTRY" | grep -q 'vm/'; then
-  TYPE="VM"
-else
-  echo "Nepodařilo se určit typ posledního vytvořeného objektu."
+if [ -z "$VMID" ]; then
+  echo "Nepodařilo se zjistit poslední vytvořené ID."
   exit 1
 fi
 
-# Získání MAC adresy
-if [ "$TYPE" == "VM" ]; then
+# Získání MAC adresy z konfigurace
+if [ -f "/etc/pve/qemu-server/$VMID.conf" ]; then
   MAC_ADDRESS=$(qm config "$VMID" | grep -oP 'macaddr=\K[^,]+')
-elif [ "$TYPE" == "CT" ]; then
+elif [ -f "/etc/pve/lxc/$VMID.conf" ]; then
   MAC_ADDRESS=$(pct config "$VMID" | grep -oP 'hwaddr=\K[^,]+')
+else
+  echo "Nepodařilo se najít konfiguraci pro ID: $VMID."
+  exit 1
 fi
 
+# Zjištění IP adresy
+IP_ADDRESS=$(grep -oP "ip=\K[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+" <<< "$(pct config "$VMID" 2>/dev/null || qm config "$VMID" 2>/dev/null)")
+
 # Výstup výsledků
-echo "Naposledy vytvořený objekt je typu: $TYPE s ID: $VMID"
+echo "ID posledního vytvořeného objektu: $VMID"
 echo "MAC adresa: $MAC_ADDRESS"
+if [ -n "$IP_ADDRESS" ]; then
+  echo "IP adresa: $IP_ADDRESS"
+else
+  echo "IP adresa nebyla nalezena."
+fi
