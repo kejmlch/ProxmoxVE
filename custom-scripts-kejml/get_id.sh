@@ -4,6 +4,7 @@
 LOG_ENTRY=$(grep 'create' /var/log/pve/tasks/index | tail -n 1)
 VMID=$(echo "$LOG_ENTRY" | grep -oP '\d+')
 
+# Ověření, zda bylo ID úspěšně získáno
 if [ -z "$VMID" ]; then
   echo "Nepodařilo se zjistit poslední vytvořené ID."
   exit 1
@@ -19,8 +20,8 @@ else
   exit 1
 fi
 
-# Zjištění IP adresy
-IP_ADDRESS=$(grep -oP "ip=\K[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+" <<< "$(pct config "$VMID" 2>/dev/null || qm config "$VMID" 2>/dev/null)")
+# Zjištění IP adresy (platí pouze pro kontejnery, pokud existuje IP nastavení)
+IP_ADDRESS=$(grep -oP "ip=\K[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+" <<< "$(pct config "$VMID" 2>/dev/null)")
 
 # Výstup výsledků
 echo "ID posledního vytvořeného objektu: $VMID"
